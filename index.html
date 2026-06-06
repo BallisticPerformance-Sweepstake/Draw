@@ -109,6 +109,9 @@ input::placeholder{color:var(--text-muted)}
   .pair-grid{grid-template-columns:1fr 1fr;gap:10px}
   .team-name{font-size:36px}
 }
+
+.rules-link { font-size: 12px; color: var(--teal); text-decoration: none; padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(46,196,182,0.3); background: rgba(46,196,182,0.08); white-space: nowrap; font-weight: 600; transition: all .2s; }
+.rules-link:hover { background: rgba(46,196,182,0.18); }
 </style>
 </head>
 <body>
@@ -332,7 +335,7 @@ function renderAdminPanel() {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">Admin Panel · 2026 FIFA World Cup</div></div>
-      <span class="mode-badge">Admin</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Admin</span>
     </div>
     <div class="page">
       <div class="tabs">
@@ -420,7 +423,7 @@ async function renderMemberDraw(token) {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">2026 FIFA World Cup</div></div>
-      <span class="mode-badge">Your Draw</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Your Draw</span>
     </div>
     <div class="reveal-body"><div class="spin-ball">⚽</div><p style="font-size:14px;color:var(--text-muted)">Loading your draw...</p></div>`;
 
@@ -492,7 +495,7 @@ function showBothTeams(participant) {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">2026 FIFA World Cup</div></div>
-      <span class="mode-badge">Your Teams</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Your Teams</span>
     </div>
     <div class="reveal-body">
       <img src="${LOGO}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:1rem;animation:popIn .4s ease both"/>
