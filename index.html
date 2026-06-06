@@ -110,8 +110,17 @@ input::placeholder{color:var(--text-muted)}
   .team-name{font-size:36px}
 }
 
-.rules-link { font-size: 12px; color: var(--teal); text-decoration: none; padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(46,196,182,0.3); background: rgba(46,196,182,0.08); white-space: nowrap; font-weight: 600; transition: all .2s; }
+.rules-link { font-size: 12px; color: var(--teal); text-decoration: none; padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(46,196,182,0.3); background: rgba(46,196,182,0.08); white-space: nowrap; font-weight: 600; transition: all .2s; margin-right: 6px; }
 .rules-link:hover { background: rgba(46,196,182,0.18); }
+.part-grid { display: flex; flex-direction: column; gap: 8px; }
+.part-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--dark); border: 1px solid var(--border); border-radius: var(--radius); }
+.part-name { font-weight: 600; font-size: 14px; color: var(--text); min-width: 120px; }
+.part-teams { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; }
+.part-team { display: flex; align-items: center; gap: 7px; background: var(--mid); border-radius: 6px; padding: 5px 10px; }
+.part-team img { width: 26px; height: 18px; object-fit: cover; border-radius: 2px; }
+.part-team-name { font-size: 12px; color: var(--text); }
+.part-pool { font-size: 10px; color: var(--text-muted); }
+.part-pending { font-size: 12px; color: var(--text-muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -268,13 +277,34 @@ async function removeParticipant(id) {
 }
 
 function showTab(tab) {
-  ['admin','teams'].forEach(t => {
+  ['admin','teams','participants'].forEach(t => {
     document.getElementById('t-'+t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('on', ['admin','teams'][i] === tab);
+    t.classList.toggle('on', ['admin','teams','participants'][i] === tab);
   });
   if (tab === 'teams') renderTeams();
+  if (tab === 'participants') renderParticipantsTab();
+}
+
+function renderParticipantsTab() {
+  const el = document.getElementById('part-grid');
+  if (!state.participants.length) {
+    el.innerHTML = '<div class="empty">No participants yet.</div>';
+    return;
+  }
+  el.innerHTML = state.participants.map(p => {
+    const t1 = p.p1 !== null ? P1[p.p1] : null;
+    const t2 = p.p2 !== null ? P2[p.p2] : null;
+    const teams = [
+      t1 ? `<div class="part-team"><img src="${flagUrl(t1.fc)}" alt="${t1.name}"/><div><div class="part-team-name">${t1.name}</div><div class="part-pool">Pool 1</div></div></div>` : '',
+      t2 ? `<div class="part-team"><img src="${flagUrl(t2.fc)}" alt="${t2.name}"/><div><div class="part-team-name">${t2.name}</div><div class="part-pool">Pool 2</div></div></div>` : ''
+    ].filter(Boolean).join('');
+    return `<div class="part-row">
+      <span class="part-name">${p.name}</span>
+      <div class="part-teams">${teams || '<span class="part-pending">Teams not yet drawn</span>'}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderStats() {
@@ -335,12 +365,13 @@ function renderAdminPanel() {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">Admin Panel · 2026 FIFA World Cup</div></div>
-      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Admin</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules &amp; Regs</a><span class="mode-badge">Admin</span>
     </div>
     <div class="page">
       <div class="tabs">
         <button class="tab on" onclick="showTab('admin')">Participants</button>
         <button class="tab" onclick="showTab('teams')">Teams</button>
+        <button class="tab" onclick="showTab('participants')">Participants</button>
       </div>
       <div id="t-admin">
         <div class="card">
@@ -372,6 +403,7 @@ function renderAdminPanel() {
         </div>
       </div>
       <div id="t-teams" style="display:none"><div class="card" id="tgrid"></div></div>
+      <div id="t-participants" style="display:none"><div class="card"><div class="sec">All Participants &amp; Teams</div><div class="part-grid" id="part-grid"><div class="empty">Loading...</div></div></div></div>
     </div>`;
   loadFromSheet().then(() => renderAdmin());
 }
@@ -423,7 +455,7 @@ async function renderMemberDraw(token) {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">2026 FIFA World Cup</div></div>
-      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Your Draw</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules &amp; Regs</a><span class="mode-badge">Your Draw</span>
     </div>
     <div class="reveal-body"><div class="spin-ball">⚽</div><p style="font-size:14px;color:var(--text-muted)">Loading your draw...</p></div>`;
 
@@ -495,7 +527,7 @@ function showBothTeams(participant) {
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">2026 FIFA World Cup</div></div>
-      <a class="rules-link" href="rules.html" target="_blank">Rules & Regs</a><span class="mode-badge">Your Teams</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules &amp; Regs</a><span class="mode-badge">Your Teams</span>
     </div>
     <div class="reveal-body">
       <img src="${LOGO}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:1rem;animation:popIn .4s ease both"/>
