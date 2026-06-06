@@ -110,17 +110,23 @@ input::placeholder{color:var(--text-muted)}
   .team-name{font-size:36px}
 }
 
+.member-tabs { display: flex; gap: 6px; margin: 1.5rem 0 1rem; background: var(--dark-mid); padding: 5px; border-radius: var(--radius); border: 1px solid var(--border); width: fit-content; }
+.member-tab { padding: 7px 18px; border-radius: 7px; font-size: 13px; font-weight: 500; cursor: pointer; background: transparent; color: var(--text-muted); border: none; transition: all .2s; font-family: 'DM Sans', sans-serif; }
+.member-tab:hover { color: var(--text); }
+.member-tab.on { background: var(--teal); color: #0d0d0d; font-weight: 700; }
+.part-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--dark); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 8px; }
+.part-row.is-mine { border-color: var(--teal-border); background: rgba(46,196,182,0.06); }
+.part-name { font-weight: 600; font-size: 14px; color: var(--text); min-width: 110px; }
+.part-name.is-mine { color: var(--teal); }
+.part-teams { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
+.part-team { display: flex; align-items: center; gap: 7px; background: var(--mid); border-radius: 6px; padding: 5px 10px; }
+.part-team.is-mine { background: rgba(46,196,182,0.12); border: 1px solid rgba(46,196,182,0.25); }
+.part-team img { width: 26px; height: 18px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+.part-team-name { font-size: 12px; color: var(--text); }
+.part-team.is-mine .part-team-name { color: var(--teal-light); font-weight: 600; }
+.part-pool { font-size: 10px; color: var(--text-muted); }
 .rules-link { font-size: 12px; color: var(--teal); text-decoration: none; padding: 5px 12px; border-radius: 20px; border: 1px solid rgba(46,196,182,0.3); background: rgba(46,196,182,0.08); white-space: nowrap; font-weight: 600; transition: all .2s; margin-right: 6px; }
 .rules-link:hover { background: rgba(46,196,182,0.18); }
-.part-grid { display: flex; flex-direction: column; gap: 8px; }
-.part-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--dark); border: 1px solid var(--border); border-radius: var(--radius); }
-.part-name { font-weight: 600; font-size: 14px; color: var(--text); min-width: 120px; }
-.part-teams { display: flex; gap: 10px; flex: 1; flex-wrap: wrap; }
-.part-team { display: flex; align-items: center; gap: 7px; background: var(--mid); border-radius: 6px; padding: 5px 10px; }
-.part-team img { width: 26px; height: 18px; object-fit: cover; border-radius: 2px; }
-.part-team-name { font-size: 12px; color: var(--text); }
-.part-pool { font-size: 10px; color: var(--text-muted); }
-.part-pending { font-size: 12px; color: var(--text-muted); font-style: italic; }
 </style>
 </head>
 <body>
@@ -277,34 +283,13 @@ async function removeParticipant(id) {
 }
 
 function showTab(tab) {
-  ['admin','teams','participants'].forEach(t => {
+  ['admin','teams'].forEach(t => {
     document.getElementById('t-'+t).style.display = t === tab ? '' : 'none';
   });
   document.querySelectorAll('.tab').forEach((t,i) => {
-    t.classList.toggle('on', ['admin','teams','participants'][i] === tab);
+    t.classList.toggle('on', ['admin','teams'][i] === tab);
   });
   if (tab === 'teams') renderTeams();
-  if (tab === 'participants') renderParticipantsTab();
-}
-
-function renderParticipantsTab() {
-  const el = document.getElementById('part-grid');
-  if (!state.participants.length) {
-    el.innerHTML = '<div class="empty">No participants yet.</div>';
-    return;
-  }
-  el.innerHTML = state.participants.map(p => {
-    const t1 = p.p1 !== null ? P1[p.p1] : null;
-    const t2 = p.p2 !== null ? P2[p.p2] : null;
-    const teams = [
-      t1 ? `<div class="part-team"><img src="${flagUrl(t1.fc)}" alt="${t1.name}"/><div><div class="part-team-name">${t1.name}</div><div class="part-pool">Pool 1</div></div></div>` : '',
-      t2 ? `<div class="part-team"><img src="${flagUrl(t2.fc)}" alt="${t2.name}"/><div><div class="part-team-name">${t2.name}</div><div class="part-pool">Pool 2</div></div></div>` : ''
-    ].filter(Boolean).join('');
-    return `<div class="part-row">
-      <span class="part-name">${p.name}</span>
-      <div class="part-teams">${teams || '<span class="part-pending">Teams not yet drawn</span>'}</div>
-    </div>`;
-  }).join('');
 }
 
 function renderStats() {
@@ -371,7 +356,6 @@ function renderAdminPanel() {
       <div class="tabs">
         <button class="tab on" onclick="showTab('admin')">Participants</button>
         <button class="tab" onclick="showTab('teams')">Teams</button>
-        <button class="tab" onclick="showTab('participants')">Participants</button>
       </div>
       <div id="t-admin">
         <div class="card">
@@ -403,7 +387,6 @@ function renderAdminPanel() {
         </div>
       </div>
       <div id="t-teams" style="display:none"><div class="card" id="tgrid"></div></div>
-      <div id="t-participants" style="display:none"><div class="card"><div class="sec">All Participants &amp; Teams</div><div class="part-grid" id="part-grid"><div class="empty">Loading...</div></div></div></div>
     </div>`;
   loadFromSheet().then(() => renderAdmin());
 }
@@ -520,32 +503,95 @@ function revealP2(participant) {
   setTimeout(() => showBothTeams(participant), 1400);
 }
 
-function showBothTeams(participant) {
+async function showBothTeams(participant) {
   const t1 = P1[participant.p1];
   const t2 = P2[participant.p2];
+
+  // Fetch all participants for tabs
+  let allParts = [];
+  try {
+    const data = await gasRequest('getAll');
+    allParts = (data && data.participants) ? data.participants : [];
+  } catch(e) { allParts = []; }
+
+  const myTeamNames = [t1 ? t1.name : null, t2 ? t2.name : null].filter(Boolean);
+  function isMe(p) { return p.token === participant.token; }
+
+  function renderParticipantsTab() {
+    if (!allParts.length) return '<p style="font-size:14px;color:var(--text-muted);padding:1rem 0">No participants yet.</p>';
+    return allParts.map(p => {
+      const rt1 = p.p1 !== null ? P1[p.p1] : null;
+      const rt2 = p.p2 !== null ? P2[p.p2] : null;
+      const mine = isMe(p);
+      const t1mine = rt1 && myTeamNames.includes(rt1.name);
+      const t2mine = rt2 && myTeamNames.includes(rt2.name);
+      const teamHtml = [
+        rt1 ? `<div class="part-team ${t1mine ? 'is-mine' : ''}"><img src="${flagUrl(rt1.fc)}" alt="${rt1.name}"/><div><div class="part-team-name">${rt1.name}</div><div class="part-pool">Pool 1</div></div></div>` : '',
+        rt2 ? `<div class="part-team ${t2mine ? 'is-mine' : ''}"><img src="${flagUrl(rt2.fc)}" alt="${rt2.name}"/><div><div class="part-team-name">${rt2.name}</div><div class="part-pool">Pool 2</div></div></div>` : ''
+      ].filter(Boolean).join('');
+      return `<div class="part-row ${mine ? 'is-mine' : ''}">
+        <span class="part-name ${mine ? 'is-mine' : ''}">${p.name}${mine ? ' 👈' : ''}</span>
+        <div class="part-teams">${teamHtml || '<span style="font-size:12px;color:var(--text-muted);font-style:italic">Teams not yet drawn</span>'}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function renderLeaderboard() {
+    const categories = [
+      { icon: '🥇', title: 'Overall Winner', prize: '£50' },
+      { icon: '🥈', title: 'Furthest Underdog Run', prize: '£20' },
+      { icon: '🃏', title: 'Most Red Cards', prize: '£20' },
+      { icon: '🥉', title: 'Biggest Upset Win', prize: '£15' },
+      { icon: '📊', title: 'Best Goal Difference', prize: '£15' },
+    ];
+    return categories.map(cat => `
+      <div style="background:var(--dark-mid);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px">
+        <div style="padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+          <span style="font-size:18px">${cat.icon}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px">${cat.title}</span>
+          <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--teal)">${cat.prize}</span>
+        </div>
+        <div style="padding:.75rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic">Tournament not yet started · Stats will update live</div>
+      </div>`).join('');
+  }
+
+  function switchTab(tab) {
+    document.getElementById('mt-leaderboard').classList.toggle('on', tab === 'leaderboard');
+    document.getElementById('mt-participants').classList.toggle('on', tab === 'participants');
+    document.getElementById('mc-leaderboard').style.display = tab === 'leaderboard' ? '' : 'none';
+    document.getElementById('mc-participants').style.display = tab === 'participants' ? '' : 'none';
+  }
+
   document.getElementById('app').innerHTML = `
     <div class="header">
       <img class="header-logo" src="${LOGO}" alt="Ballistic Performance"/>
       <div><div class="header-title">Ballistic Performance World Cup Sweepstake</div><div class="header-sub">2026 FIFA World Cup</div></div>
-      <a class="rules-link" href="rules.html" target="_blank">Rules &amp; Regs</a><span class="mode-badge">Your Teams</span>
+      <a class="rules-link" href="rules.html" target="_blank">Rules &amp; Regs</a>
+      <span class="mode-badge">${participant.name}</span>
     </div>
-    <div class="reveal-body">
-      <img src="${LOGO}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:1rem;animation:popIn .4s ease both"/>
-      <div class="step-label" style="animation:popIn .4s ease both">Your 2026 World Cup teams</div>
-      <div class="reveal-title" style="animation:popIn .4s ease .1s both">${participant.name}</div>
-      <div class="pair-grid" style="animation:popIn .4s ease .2s both">
-        <div class="pcard">
-          <img class="pcard-flag" src="${flagUrl(t1.fc)}" alt="${t1.name}"/>
-          <div class="pcard-name">${t1.name}</div>
-          <div class="pcard-meta">Seed ${t1.s}<br/>FIFA Rank ${t1.r}<br/>Pool 1</div>
-        </div>
-        <div class="pcard">
-          <img class="pcard-flag" src="${flagUrl(t2.fc)}" alt="${t2.name}"/>
-          <div class="pcard-name">${t2.name}</div>
-          <div class="pcard-meta">Seed ${t2.s}<br/>FIFA Rank ${t2.r}<br/>Pool 2</div>
+    <div style="max-width:860px;margin:0 auto;padding:1.5rem">
+      <div style="margin-bottom:1.5rem;animation:popIn .4s ease both">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:1.5px;color:var(--teal);margin-bottom:.875rem">Your Teams</div>
+        <div class="pair-grid" style="max-width:100%">
+          <div class="pcard">
+            <img class="pcard-flag" src="${flagUrl(t1.fc)}" alt="${t1.name}"/>
+            <div class="pcard-name">${t1.name}</div>
+            <div class="pcard-meta">Seed ${t1.s}<br/>FIFA Rank ${t1.r}<br/>Pool 1</div>
+          </div>
+          <div class="pcard">
+            <img class="pcard-flag" src="${flagUrl(t2.fc)}" alt="${t2.name}"/>
+            <div class="pcard-name">${t2.name}</div>
+            <div class="pcard-meta">Seed ${t2.s}<br/>FIFA Rank ${t2.r}<br/>Pool 2</div>
+          </div>
         </div>
       </div>
-      <p class="good-luck">Good luck — may your teams bring home the prizes! 🏆</p>
+      <div style="height:1px;background:var(--border);margin-bottom:1.25rem"></div>
+      <div class="member-tabs">
+        <button class="member-tab on" id="mt-leaderboard" onclick="document.getElementById('mc-leaderboard').style.display='';document.getElementById('mc-participants').style.display='none';this.classList.add('on');document.getElementById('mt-participants').classList.remove('on')">Leaderboard</button>
+        <button class="member-tab" id="mt-participants" onclick="document.getElementById('mc-participants').style.display='';document.getElementById('mc-leaderboard').style.display='none';this.classList.add('on');document.getElementById('mt-leaderboard').classList.remove('on')">Participants</button>
+      </div>
+      <div id="mc-leaderboard">${renderLeaderboard()}</div>
+      <div id="mc-participants" style="display:none">${renderParticipantsTab()}</div>
     </div>`;
 }
 
