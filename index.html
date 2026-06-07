@@ -507,12 +507,14 @@ async function showBothTeams(participant) {
   const t1 = P1[participant.p1];
   const t2 = P2[participant.p2];
 
-  // Fetch all participants for tabs
+  // Fetch all participants and leaderboards
   let allParts = [];
+  let leaderboards = {};
   try {
     const data = await gasRequest('getAll');
     allParts = (data && data.participants) ? data.participants : [];
-  } catch(e) { allParts = []; }
+    leaderboards = (data && data.leaderboards) ? data.leaderboards : {};
+  } catch(e) { allParts = []; leaderboards = {}; }
 
   const myTeamNames = [t1 ? t1.name : null, t2 ? t2.name : null].filter(Boolean);
   function isMe(p) { return p.token === participant.token; }
@@ -536,23 +538,56 @@ async function showBothTeams(participant) {
     }).join('');
   }
 
-  function renderLeaderboard() {
-    const categories = [
-      { icon: '🥇', title: 'Overall Winner', prize: '£50' },
-      { icon: '🥈', title: 'Furthest Underdog Run', prize: '£20' },
-      { icon: '🃏', title: 'Most Red Cards', prize: '£20' },
-      { icon: '🥉', title: 'Biggest Upset Win', prize: '£15' },
-      { icon: '📊', title: 'Best Goal Difference', prize: '£15' },
-    ];
-    return categories.map(cat => `
-      <div style="background:var(--dark-mid);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px">
-        <div style="padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-          <span style="font-size:18px">${cat.icon}</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px">${cat.title}</span>
-          <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--teal)">${cat.prize}</span>
-        </div>
-        <div style="padding:.75rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic">Tournament not yet started · Stats will update live</div>
-      </div>`).join('');
+  function posLabel(i) {
+    const colors = ['#f0c040','#b0b8c0','#cd7f32'];
+    const c = colors[i] || 'var(--text-muted)';
+    return `<span style="color:${c};font-family:'Bebas Neue',sans-serif;font-size:18px;width:22px;text-align:center;flex-shrink:0">${i+1}</span>`;
+  }
+
+  function renderLbCategory(icon, title, prize, rows, statKey) {
+    const hasData = rows && rows.some(r => r.stat > 0);
+    const rowsHtml = !rows || !rows.length
+      ? '<div style="padding:1rem 1.25rem;font-size:13px;color:var(--text-muted);font-style:italic">No participants yet</div>'
+      : rows.map((r, i) => {
+          const mine = r.token === participant.token;
+          const rt1 = r.p1 !== null ? P1[r.p1] : null;
+          const rt2 = r.p2 !== null ? P2[r.p2] : null;
+          const t1mine = rt1 && myTeamNames.includes(rt1.name);
+          const t2mine = rt2 && myTeamNames.includes(rt2.name);
+          return `<div style="display:flex;align-items:center;gap:10px;padding:8px 1.25rem;${mine ? 'background:rgba(46,196,182,0.08);border-left:3px solid var(--teal)' : ''}">
+            ${posLabel(i)}
+            ${rt1 ? `<img src="${flagUrl(rt1.fc)}" style="width:26px;height:18px;object-fit:cover;border-radius:2px;flex-shrink:0" alt="${rt1.name}"/>` : ''}
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:${mine?'700':'500'};color:${mine?'var(--teal)':'var(--text)'}">${r.name}</div>
+              <div style="font-size:12px;color:var(--text-muted)">
+                ${rt1 ? `<span style="${t1mine?'font-weight:700;color:var(--teal-light)':''}">${rt1.name}</span>` : ''}
+                ${rt1 && rt2 ? ' · ' : ''}
+                ${rt2 ? `<span style="${t2mine?'font-weight:700;color:var(--teal-light)':''}">${rt2.name}</span>` : ''}
+              </div>
+            </div>
+            <span style="font-size:13px;font-weight:700;color:${mine?'var(--teal)':'var(--text-muted)'};white-space:nowrap">${r.statLabel}</span>
+          </div>`;
+        }).join('');
+
+    return `<div style="background:var(--dark-mid);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:12px">
+      <div style="padding:.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">${icon}</span>
+        <span style="font-family:'Bebas Neue',sans-serif;font-size:17px;letter-spacing:1px">${title}</span>
+        <span style="margin-left:auto;font-size:12px;font-weight:700;color:var(--teal)">${prize}</span>
+      </div>
+      ${rowsHtml}
+      ${!hasData ? '<div style="padding:.6rem 1.25rem;font-size:11px;color:var(--text-muted);font-style:italic;border-top:1px solid var(--border)">Tournament not yet started · Updates live when play begins</div>' : ''}
+    </div>`;
+  }
+
+  function renderLeaderboard(leaderboards) {
+    const lb = leaderboards || {};
+    return [
+      renderLbCategory('🥈', 'Furthest Underdog Run', '£20', lb.underdog, 'underdogRound'),
+      renderLbCategory('🃏', 'Most Red Cards', '£20', lb.redCards, 'redCards'),
+      renderLbCategory('🥉', 'Biggest Upset Win', '£15', lb.upsetScore, 'upsetScore'),
+      renderLbCategory('📊', 'Best Goal Difference', '£15', lb.goalDiff, 'goalDiff'),
+    ].join('');
   }
 
   function switchTab(tab) {
@@ -590,7 +625,7 @@ async function showBothTeams(participant) {
         <button class="member-tab on" id="mt-leaderboard" onclick="document.getElementById('mc-leaderboard').style.display='';document.getElementById('mc-participants').style.display='none';this.classList.add('on');document.getElementById('mt-participants').classList.remove('on')">Leaderboard</button>
         <button class="member-tab" id="mt-participants" onclick="document.getElementById('mc-participants').style.display='';document.getElementById('mc-leaderboard').style.display='none';this.classList.add('on');document.getElementById('mt-leaderboard').classList.remove('on')">Participants</button>
       </div>
-      <div id="mc-leaderboard">${renderLeaderboard()}</div>
+      <div id="mc-leaderboard">${renderLeaderboard(leaderboards)}</div>
       <div id="mc-participants" style="display:none">${renderParticipantsTab()}</div>
     </div>`;
 }
